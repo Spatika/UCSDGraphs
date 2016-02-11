@@ -1,5 +1,5 @@
 /**
- * @author UCSD MOOC development team and Spatika
+ * @author UCSD MOOC development team 
  * 
  * A class which represents a graph of geographic locations
  * Nodes in the graph are intersections between 
@@ -8,12 +8,10 @@
 package roadgraph;
 
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -22,7 +20,7 @@ import geography.GeographicPoint;
 import util.GraphLoader;
 
 /**
- * @author UCSD MOOC development team and Spatika
+ * @author UCSD MOOC development team
  * 
  * A class which represents a graph of geographic locations
  * Nodes in the graph are intersections between 
@@ -30,7 +28,7 @@ import util.GraphLoader;
  */
 public class MapGraph {
 	
-	HashMap<GeographicPoint, MapNode> nodeList;
+	HashMap<GeographicPoint, MapNode> nodeList; //associate each (lat, long) to a MapNode object
 	
 	int numVertices ;
 	int numEdges ; 
@@ -64,7 +62,7 @@ public class MapGraph {
 		Set<GeographicPoint> verticeSet = new HashSet<GeographicPoint>() ; 
 		
 		
-		verticeSet = nodeList.keySet() ;
+		verticeSet = nodeList.keySet() ; //set of keys in this map is the set of GeographicPoints, which is what we want
 		
 		return verticeSet ;
 	}
@@ -77,7 +75,6 @@ public class MapGraph {
 	{
 		return numEdges;
 	}
-
 	
 	
 	/** Add a node corresponding to an intersection at a Geographic Point
@@ -95,10 +92,12 @@ public class MapGraph {
 
 		MapNode newNode = new MapNode(location) ;
 		
-		if(nodeList.containsValue(newNode))
+		if(nodeList.containsValue(newNode)) //if graph contains this node already
 			return false ;
 		
-		nodeList.put(location, newNode) ;
+		nodeList.put(location, newNode) ; 
+		//else, add the node to the nodeList
+		//MapNode ctor takes care of initializing the new nodes edge list
 		
 		numVertices++ ; 
 		
@@ -120,17 +119,21 @@ public class MapGraph {
 	public void addEdge(GeographicPoint from, GeographicPoint to, String roadName,
 			String roadType, double length) throws IllegalArgumentException {
 		
+		//checking input
 		if(from == null || to == null || roadName == null || roadType == null)
 			throw new IllegalArgumentException("Arguments to addEdge method cannot be null!") ;
 		
 		if(length < 0)
 			throw new IllegalArgumentException("Length of road cannot be less than zero!") ; 
 		
+		//if input is valid --
+		
 		MapNode start = nodeList.get(from) ; 
 		MapNode end = nodeList.get(to) ; 
 		
 		MapEdge newEdge = new MapEdge(start, end, roadName, roadType, length) ; 
 		
+		//update the edge list associated with the origin of this edge
 		start.updateEdgeList(newEdge);
 	
 		numEdges++ ; 
@@ -163,25 +166,23 @@ public class MapGraph {
 			 					     GeographicPoint goal, Consumer<GeographicPoint> nodeSearched)
 	{
 		
-		// Hook for visualization.  See writeup.
+		// Hook for visualization.  
 		//nodeSearched.accept(next.getLocation());
-		boolean found = false ;
-	
+		
 		Queue<MapNode> bfsQueue = new LinkedList<MapNode>() ; 
 		HashSet<MapNode> visited = new HashSet<MapNode>() ; 
 		HashMap<MapNode, MapNode> parentMap = new HashMap<MapNode, MapNode>() ;
-
-	
-		MapNode source = nodeList.get(start) ;
-		
-		if(source == null || goal == null || start == null) {
-			System.out.println("Argument null; goal not reachable!!") ;
-			return new LinkedList<GeographicPoint>() ;	
-		}
 			
-	
-		bfsQueue.offer(source) ;
-		visited.add(source) ;
+		boolean status = bfsSetup(bfsQueue, visited, start, goal) ; 
+		
+		
+		if(status == false)
+			return new LinkedList<GeographicPoint>() ;
+		
+		//else, setup has gone as planned, so continue --
+		
+
+		boolean found = false ;
 		
 		while(!bfsQueue.isEmpty()) {
 			MapNode curr = bfsQueue.remove() ; 
@@ -189,14 +190,13 @@ public class MapGraph {
 			
 			if(curr == nodeList.get(goal)) {
 				found = true ;
-				break ; //must now return parentMap
+				break ; //match found, can display/return the path
 			}
 			
 			//visit neighbors of curr Node
 			List<MapEdge> curNeighbors = curr.getEdgeList() ; 
 			
-			//System.out.println("current node at: " + curr.getNodeLocation() + "but goal is: " + goal) ; 
-			
+		
 			for(int i = 0 ; i < curNeighbors.size() ; i++) {
 				
 				MapNode curNeighbor = curNeighbors.get(i).getEndNode() ; 
@@ -212,21 +212,60 @@ public class MapGraph {
 		
 		if(found == false) {
 			System.out.println("Goal not reachable!!") ;
-			return new LinkedList<GeographicPoint>() ;
+			return new LinkedList<GeographicPoint>() ;//return empty list
 		}
 		//find path from start to goal
 		return findPath(parentMap, nodeList.get(start), nodeList.get(goal)) ;
 	}
 	
-
-	private List<GeographicPoint> findPath(HashMap<MapNode, MapNode> parentMap, MapNode start, MapNode goal) {
-		LinkedList<GeographicPoint> path = new LinkedList<GeographicPoint>() ;
+	
+	/** This method takes care of the 'housekeeping' that needs to be done before doing the actual breadth-first search..
+	 * ...Including adding the source node to 'visited' set and the underlying queue
+	 * @param bfsQueue FIFO data structure for unexplored nodes
+	 * @param visited  HashSet containing visited nodes
+	 * @param parentMap maps visited MapNodes to their parents (just previously visited)
+	 * @param goal destination GeographicPoint
+	 * @param start source GeographicPoint
+	 * @return whether input is valid or not/can move on to search part or not
+	 */
+	
+	
+	private boolean bfsSetup(Queue<MapNode> bfsQueue, 
+			HashSet<MapNode> visited, GeographicPoint start, GeographicPoint goal) {
+	
+		//check for invalid input
+		if(goal == null || start == null) {
+			System.out.println("Argument null; goal not reachable!!") ;
+			return false ;
+		}
 		
+		MapNode source = nodeList.get(start) ;
+		
+		bfsQueue.offer(source) ;
+		visited.add(source) ;
+		
+		return true ;
+		
+	}
+
+
+	/** To backtrack the path taken from 'goal' to 'start'...
+	 * ..using parentMap, and add to head of LinkedList
+	 * @param parentMap
+	 * @param start
+	 * @param goal
+	 * @return
+	 */
+	
+	private List<GeographicPoint> findPath(HashMap<MapNode, MapNode> parentMap, MapNode start, MapNode goal) {
+		
+		LinkedList<GeographicPoint> path = new LinkedList<GeographicPoint>() ;
 		
 		MapNode curr = goal ; 
 		
 		while(curr != start) {
-			path.addFirst(curr.getNodeLocation()) ;
+			GeographicPoint currPoint = curr.getNodeLocation() ;
+			path.addFirst(currPoint) ;
 			curr = parentMap.get(curr) ;
 		}
 		
@@ -300,10 +339,6 @@ public class MapGraph {
 		return null;
 	}
 
-	private static void printGraph() {
-		// TODO Auto-generated method stub
-		
-	}
 	
 	
 	public static void main(String[] args)

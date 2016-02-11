@@ -1,23 +1,50 @@
 package roadgraph;
 
+
+/**
+ * @author Spatika
+ * Class to encapsulate various attributes of an edge - start & end nodes, weight, road name, etc.
+ * 
+ */
+
 public class MapEdge {
+	
+	//***PRIVATE MEMBERS***//
 	private MapNode startNode ; 
 	private MapNode endNode ; 
 	
-	//weight of the edge
-	private double weight ;
-	private String roadType ;
+    private double weight ; //weight of the edge is it's length or distance in km.
+
+	private String roadType ; //like 'city', 'main', etc.
 	private String roadName ; 
+	
+	
+	/**
+	 * CONSTRUCTOR for MapEdge
+	 * @param start the starting MapNode of this edge
+	 * @param end the ending MapNode of this edge
+	 * @param roadName 
+	 * @param roadType 
+	 * @param length the edge 'weight' 
+	 */
 	
 	public MapEdge(MapNode start, MapNode end, String roadName, String roadType, double length) {
 		startNode = start ;
 		endNode = end ;
+		
 		this.roadName = roadName ; 
 		this.roadType = roadType ;
+		
 		weight = length ;
 	}
 
-	//setters
+	//***SETTERS***//
+	
+	/**
+	 * This method (and other setters) can be used to update edge properties 
+	 * ...Change street name, or type, for example
+	 * @param x - Starting point of this edge
+	 */
 	public void setStartNode(MapNode x) {
 		startNode = x ;
 	}
@@ -30,12 +57,15 @@ public class MapEdge {
 		weight = w ;
 	}
 	
-	public void setStreet(String street) {
-		roadName = street ; 
+	public void setStreet(String road) {
+		roadName = road; 
 	}
 	
+	public void setStreetType(String type) {
+		roadType = type ; 
+	}
 	
-	//getters
+	//***GETTERS***//
 	
 	public MapNode getStartNode() {
 		return startNode ;
