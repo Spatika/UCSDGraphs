@@ -12,6 +12,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.PriorityQueue;
 import java.util.Queue;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -32,6 +34,9 @@ public class MapGraph {
 	
 	int numVertices ;
 	int numEdges ; 
+	
+	static int dijkstraCount ;
+	static int aStarCount ;
 	
 	/** 
 	 * Create a new empty MapGraph 
@@ -299,12 +304,99 @@ public class MapGraph {
 	public List<GeographicPoint> dijkstra(GeographicPoint start, 
 										  GeographicPoint goal, Consumer<GeographicPoint> nodeSearched)
 	{
-		// TODO: Implement this method in WEEK 3
-
+		
 		// Hook for visualization.  See writeup.
 		//nodeSearched.accept(next.getLocation());
 		
-		return null;
+	
+		dijkstraCount=0;
+		LinkedList<GeographicPoint> path = new LinkedList<GeographicPoint>();
+		
+		//check for invalid input
+		if(goal == null || start == null) {
+			System.out.println("Argument null; goal not reachable!!") ;
+			return path ;
+		}
+		
+		boolean found = false;
+		
+		HashSet<MapNode> visited = new HashSet<MapNode>() ; 
+		HashMap<MapNode, MapNode> parentMap = new HashMap<MapNode, MapNode>() ;
+		
+		PriorityQueue<MapNode> pq = new PriorityQueue<MapNode>() ;
+		
+		//make sure to init all distances to infinity first
+		
+		initDistancesFromSource(0) ; //zero to indicate it's not aStar but dijkstra
+		
+		
+		MapNode source = nodeList.get(start) ;
+		
+		source.distance = 0 ; 
+	
+		
+		pq.offer(source) ;//MapNode implements Comparable interface
+		
+		
+		while(!pq.isEmpty()) {
+			MapNode curr = pq.remove() ; 
+			dijkstraCount++;
+		
+		    if(!(visited.contains(curr))) {
+		    	visited.add(curr) ;
+		    	if(curr == nodeList.get(goal)) {
+		    		found = true ; 
+		    		break ; 
+		    	}
+		    	
+		    	//for each of currs neighbors
+		    	List<MapEdge> curNeighbors = curr.getEdgeList() ; 
+				
+				
+				for(int i = 0 ; i < curNeighbors.size() ; i++) {
+					
+					MapNode curNeighbor = curNeighbors.get(i).getEndNode() ; 
+					
+					if(!(visited.contains(curNeighbor))) {
+						//if path thru cur to n is shorter, updates distance[n]
+						double edgeWeight = curNeighbors.get(i).getWeight() ;
+						if(curNeighbor.distance > curr.distance + edgeWeight) {
+							curNeighbor.distance = curr.distance + edgeWeight; 
+							pq.offer(curNeighbor) ;
+							parentMap.put(curNeighbor, curr) ;
+						}
+					}
+					
+				}//done visiting neighbors of curr
+		    	
+		    }//end of 'if curr not visited'
+			
+			
+		}//end while loop
+		
+		if(found == false) {
+			System.out.println("Dijkstra - No path found.") ;
+			return path ;
+		}
+		
+		return findPath(parentMap, nodeList.get(start), nodeList.get(goal)) ;
+	}
+
+	
+	/** Method to set all distances from the source to infinity
+	 * @author Spatika
+	 * 
+	 */
+	private void initDistancesFromSource(int aStarFlag) {
+		
+		for(Map.Entry<GeographicPoint, MapNode> entry : nodeList.entrySet()) {
+			entry.getValue().distance = Double.POSITIVE_INFINITY ;
+			
+			if(aStarFlag == 1)
+				entry.getValue().distToGoal = Double.POSITIVE_INFINITY; //h-score
+			else
+				entry.getValue().distToGoal = 0.0 ; //h-score
+		}
 	}
 
 	/** Find the path from start to goal using A-Star search
@@ -331,18 +423,92 @@ public class MapGraph {
 	public List<GeographicPoint> aStarSearch(GeographicPoint start, 
 											 GeographicPoint goal, Consumer<GeographicPoint> nodeSearched)
 	{
-		// TODO: Implement this method in WEEK 3
-		
+		aStarCount = 0 ;
 		// Hook for visualization.  See writeup.
 		//nodeSearched.accept(next.getLocation());
 		
-		return null;
+		List<GeographicPoint> path = new LinkedList<GeographicPoint>() ;
+		initDistancesFromSource(1) ; //one to indicate it's aStar
+		
+
+		//check for invalid input
+		if(goal == null || start == null) {
+			System.out.println("Argument null; goal not reachable!!") ;
+			return path ;
+		}
+		
+		boolean found = false;
+		
+		HashSet<MapNode> visited = new HashSet<MapNode>() ; 
+		HashMap<MapNode, MapNode> parentMap = new HashMap<MapNode, MapNode>() ;
+		
+		PriorityQueue<MapNode> pq = new PriorityQueue<MapNode>() ;
+		
+		MapNode source = nodeList.get(start) ;
+		MapNode target = nodeList.get(goal);
+		
+		source.distance = 0 ; 
+		source.distToGoal = 0; //h-score for source node
+		
+		pq.offer(source) ;//MapNode implements Comparable interface
+		
+		
+		while(!pq.isEmpty()) {
+			MapNode curr = pq.remove() ; 
+			aStarCount++;
+		
+		    if(!(visited.contains(curr))) {
+		    	visited.add(curr) ;
+		    	if(curr == nodeList.get(goal)) {
+		    		found = true ; 
+		    		break ; 
+		    	}
+		    	
+		    	//for each of currs neighbors
+		    	List<MapEdge> curNeighbors = curr.getEdgeList() ; 
+				
+				
+				for(int i = 0 ; i < curNeighbors.size() ; i++) {
+					
+					MapNode curNeighbor = curNeighbors.get(i).getEndNode() ; 
+					
+					if(!(visited.contains(curNeighbor))) {
+						//if path thru cur to n is shorter, updates distance[n]
+						double gScore = curNeighbors.get(i).getWeight() ; //g score
+						
+						//calculate distance between GeographicLocation goal - GeographicLocation curNeighbor.getNodeLocation()
+						double hScore = goal.distance(curNeighbor.getNodeLocation()); 
+						//curNeighbor to source + curNeighbor to goal
+						curNeighbor.distToGoal = hScore ; 
+						
+						if(curNeighbor.distance > curr.distance + gScore) {
+							curNeighbor.distance = curr.distance + gScore; 
+							pq.offer(curNeighbor) ;
+							parentMap.put(curNeighbor, curr) ;
+						}
+					}
+					
+				}//done visiting neighbors of curr
+		    	
+		    }//end of 'if curr not visited'
+			
+			
+		}//end while loop
+		
+		if(found == false) {
+			System.out.println("AStar- No path found.") ;
+			return path ;
+		}
+		
+		
+		return findPath(parentMap, nodeList.get(start), nodeList.get(goal)) ;
 	}
 
 	
 	
 	public static void main(String[] args)
 	{
+		/*
 		System.out.print("Making a new map...");
 		MapGraph theMap = new MapGraph();
 		System.out.print("DONE. \nLoading the map...");
@@ -360,10 +526,11 @@ public class MapGraph {
 		GeographicPoint end = new GeographicPoint(8.0, -1.0) ; 
 		List<GeographicPoint> route = theMap.bfs(start, end) ;
 		
-		System.out.println(route) ;
+		System.out.println(route) ;*/
 		
 		
-		/* Use this code in Week 3 End of Week Quiz
+		//Use this code in Week 3 End of Week Quiz
+		/*
 		MapGraph theMap = new MapGraph();
 		System.out.print("DONE. \nLoading the map...");
 		GraphLoader.loadRoadMap("data/maps/utc.map", theMap);
@@ -374,9 +541,42 @@ public class MapGraph {
 		
 		
 		List<GeographicPoint> route = theMap.dijkstra(start,end);
-		List<GeographicPoint> route2 = theMap.aStarSearch(start,end);
+		System.out.println(route) ;
+		
+		//test on Simple Test map also
+		System.out.print("Making a new map...");
+		theMap = new MapGraph();
+		System.out.print("DONE. \nLoading the map...");
+		GraphLoader.loadRoadMap("data/testdata/simpletest.map", theMap);
+		System.out.println("DONE.");
+		
+		
+		GeographicPoint start2 = new GeographicPoint(1.0, 1.0) ; 
+		GeographicPoint end2 = new GeographicPoint(8.0, -1.0) ; 
+		
+		route = theMap.dijkstra(start2, end2) ;
+		
+		System.out.println(route) ;
+		//List<GeographicPoint> route2 = theMap.aStarSearch(start,end);*/
+		
+		MapGraph theMap = new MapGraph();
+		System.out.print("DONE. \nLoading the map...");
+		GraphLoader.loadRoadMap("data/maps/utc.map", theMap);
+		System.out.println("DONE.");
 
-		*/
+		GeographicPoint start = new GeographicPoint(32.8648772, -117.2254046);
+		GeographicPoint end = new GeographicPoint(32.8660691, -117.217393);
+
+		List<GeographicPoint> route = theMap.dijkstra(start,end);
+		List<GeographicPoint> route2 = theMap.aStarSearch(start,end);
+		
+		System.out.println(route) ;
+		System.out.println(route2) ;
+		
+		System.out.println(dijkstraCount);
+
+		System.out.println(aStarCount);
+
 		
 	}
 

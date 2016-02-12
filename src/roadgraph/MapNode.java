@@ -12,12 +12,16 @@ import geography.GeographicPoint;
  * Neighbors of a MapNode can be accessed via edgeList member variable
  */
 
-public class MapNode {
+public class MapNode implements Comparable<MapNode> {
 	
 	
 	private GeographicPoint location ; //Lat. & Lon.
 	
 	private List<MapEdge> edgeList ; //list of edges originating from this node
+	
+	double distance ; //from the 'source' that you're checking! - g score
+	double distToGoal ; //dist from 'goal' that you're checking! - h score
+
 	
 	/**
 	 * CONSTRUCTOR
@@ -26,6 +30,8 @@ public class MapNode {
 	public MapNode(GeographicPoint location) {
 		this.location = location ;
 		edgeList = new ArrayList<MapEdge>() ; 
+		distance = Double.POSITIVE_INFINITY ;
+		distToGoal = Double.POSITIVE_INFINITY ;
 	}
 	
 	/**
@@ -55,5 +61,12 @@ public class MapNode {
 	 */
 	public GeographicPoint getNodeLocation() {
 		return this.location ;
+	}
+
+	@Override
+	public int compareTo(MapNode other) {
+		
+		//compare the two predicted distances - f scores
+		return Double.compare((this.distance+this.distToGoal), (other.distance+other.distToGoal)) ;
 	}
 }
